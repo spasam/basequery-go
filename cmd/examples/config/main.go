@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/kolide/osquery-go"
-	"github.com/kolide/osquery-go/plugin/config"
+	"github.com/Uptycs/basequery-go"
+	"github.com/Uptycs/basequery-go/plugin/config"
 )
 
 var (

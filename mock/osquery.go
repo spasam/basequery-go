@@ -5,7 +5,7 @@ package mock
 import (
 	"context"
 
-	"github.com/kolide/osquery-go/gen/osquery"
+	"github.com/Uptycs/basequery-go/gen/osquery"
 )
 
 var _ osquery.ExtensionManager = (*ExtensionManager)(nil)
@@ -29,6 +29,8 @@ type OptionsFunc func(ctx context.Context) (osquery.InternalOptionList, error)
 type QueryFunc func(ctx context.Context, sql string) (*osquery.ExtensionResponse, error)
 
 type GetQueryColumnsFunc func(ctx context.Context, sql string) (*osquery.ExtensionResponse, error)
+
+type StreamEventsFunc func(ctx context.Context, name string, events osquery.ExtensionPluginResponse) (*osquery.ExtensionStatus, error)
 
 type ExtensionManager struct {
 	CloseFunc        CloseFunc
@@ -60,6 +62,9 @@ type ExtensionManager struct {
 
 	GetQueryColumnsFunc        GetQueryColumnsFunc
 	GetQueryColumnsFuncInvoked bool
+
+	StreamEventsFunc        StreamEventsFunc
+	StreamEventsFuncInvoked bool
 }
 
 func (m *ExtensionManager) Close() {
@@ -110,4 +115,9 @@ func (m *ExtensionManager) Query(ctx context.Context, sql string) (*osquery.Exte
 func (m *ExtensionManager) GetQueryColumns(ctx context.Context, sql string) (*osquery.ExtensionResponse, error) {
 	m.GetQueryColumnsFuncInvoked = true
 	return m.GetQueryColumnsFunc(ctx, sql)
+}
+
+func (m *ExtensionManager) StreamEvents(ctx context.Context, name string, events osquery.ExtensionPluginResponse) (*osquery.ExtensionStatus, error) {
+	m.StreamEventsFuncInvoked = true
+	return m.StreamEventsFunc(ctx, name, events)
 }

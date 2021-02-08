@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/kolide/osquery-go"
-	"github.com/kolide/osquery-go/plugin/distributed"
+	"github.com/Uptycs/basequery-go"
+	"github.com/Uptycs/basequery-go/plugin/distributed"
 )
 
 func main() {

@@ -2,7 +2,7 @@
 
 package osquery
 
-import "github.com/kolide/osquery-go/gen/osquery"
+import "github.com/Uptycs/basequery-go/gen/osquery"
 
 var _ ExtensionManager = (*MockExtensionManager)(nil)
 
@@ -21,6 +21,8 @@ type OptionsFunc func() (osquery.InternalOptionList, error)
 type QueryFunc func(sql string) (*osquery.ExtensionResponse, error)
 
 type GetQueryColumnsFunc func(sql string) (*osquery.ExtensionResponse, error)
+
+type StreamEventsFunc func(name string, events osquery.ExtensionPluginResponse) (*osquery.ExtensionStatus, error)
 
 type MockExtensionManager struct {
 	CloseFunc        CloseFunc
@@ -46,6 +48,9 @@ type MockExtensionManager struct {
 
 	GetQueryColumnsFunc        GetQueryColumnsFunc
 	GetQueryColumnsFuncInvoked bool
+
+	StreamEventsFunc        StreamEventsFunc
+	StreamEventsFuncInvoked bool
 }
 
 func (m *MockExtensionManager) Close() {
@@ -86,4 +91,9 @@ func (m *MockExtensionManager) Query(sql string) (*osquery.ExtensionResponse, er
 func (m *MockExtensionManager) GetQueryColumns(sql string) (*osquery.ExtensionResponse, error) {
 	m.GetQueryColumnsFuncInvoked = true
 	return m.GetQueryColumnsFunc(sql)
+}
+
+func (m *MockExtensionManager) StreamEvents(name string, events osquery.ExtensionPluginResponse) (*osquery.ExtensionStatus, error) {
+	m.StreamEventsFuncInvoked = true
+	return m.StreamEventsFunc(name, events)
 }

@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/kolide/osquery-go"
+	"github.com/Uptycs/basequery-go"
 )
 
 func main() {

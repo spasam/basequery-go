@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/kolide/osquery-go/gen/osquery"
-	"github.com/kolide/osquery-go/transport"
+	"github.com/Uptycs/basequery-go/gen/osquery"
+	"github.com/Uptycs/basequery-go/transport"
 	"github.com/pkg/errors"
 
 	"github.com/apache/thrift/lib/go/thrift"
@@ -20,6 +20,7 @@ type ExtensionManager interface {
 	Options() (osquery.InternalOptionList, error)
 	Query(sql string) (*osquery.ExtensionResponse, error)
 	GetQueryColumns(sql string) (*osquery.ExtensionResponse, error)
+	StreamEvents(name string, events osquery.ExtensionPluginResponse) (*osquery.ExtensionStatus, error)
 }
 
 // ExtensionManagerClient is a wrapper for the osquery Thrift extensions API.
@@ -119,4 +120,9 @@ func (c *ExtensionManagerClient) QueryRow(sql string) (map[string]string, error)
 // GetQueryColumns requests the columns returned by the parsed query.
 func (c *ExtensionManagerClient) GetQueryColumns(sql string) (*osquery.ExtensionResponse, error) {
 	return c.Client.GetQueryColumns(context.Background(), sql)
+}
+
+// StreamEvents sends a batch of events for a event'ed table.
+func (c *ExtensionManagerClient) StreamEvents(name string, events osquery.ExtensionPluginResponse) (*osquery.ExtensionStatus, error) {
+	return c.Client.StreamEvents(context.Background(), name, events)
 }

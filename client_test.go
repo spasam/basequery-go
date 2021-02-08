@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/kolide/osquery-go/gen/osquery"
-	"github.com/kolide/osquery-go/mock"
+	"github.com/Uptycs/basequery-go/gen/osquery"
+	"github.com/Uptycs/basequery-go/mock"
 	"github.com/stretchr/testify/assert"
 )
 

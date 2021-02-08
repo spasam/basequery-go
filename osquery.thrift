@@ -1,4 +1,12 @@
+// Copyright (c) 2014-present, The osquery authors
+//
+// This source code is licensed as defined by the LICENSE file found in the
+// root directory of this source tree.
+//
+// SPDX-License-Identifier: (Apache-2.0 OR GPL-2.0-only)
+
 namespace cpp osquery.extensions
+namespace py osquery.extensions
 
 /// Registry operations use a registry name, plugin name, request/response.
 typedef map<string, string> ExtensionPluginRequest
@@ -66,7 +74,7 @@ service Extension {
     1:string registry,
     /// The registry item name (plugin name).
     2:string item,
-    /// The thrift-equivilent of an osquery::PluginRequest.
+    /// The thrift-equivalent of an osquery::PluginRequest.
     3:ExtensionPluginRequest request),
   /// Request that an extension shutdown (does not apply to managers).
   void shutdown(),
@@ -92,5 +100,12 @@ service ExtensionManager extends Extension {
   /// Allow an extension to introspect into SQL used in a parsed query.
   ExtensionResponse getQueryColumns(
     1:string sql,
+  ),
+  /// Stream batch of events for a events table.
+  ExtensionStatus streamEvents(
+    /// The name of the events table.
+    1:string name,
+    /// Batch of events for the event table.
+    2:ExtensionPluginResponse events,
   ),
 }
