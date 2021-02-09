@@ -41,6 +41,7 @@ const defaultPingInterval = 5 * time.Second
 // communication with the osquery process.
 type ExtensionManagerServer struct {
 	name         string
+	version      string
 	sockPath     string
 	serverClient ExtensionManager
 	registry     map[string](map[string]OsqueryPlugin)
@@ -63,6 +64,12 @@ var validRegistryNames = map[string]bool{
 
 type ServerOption func(*ExtensionManagerServer)
 
+func ServerVersion(version string) ServerOption {
+	return func(s *ExtensionManagerServer) {
+		s.version = version
+	}
+}
+
 func ServerTimeout(timeout time.Duration) ServerOption {
 	return func(s *ExtensionManagerServer) {
 		s.timeout = timeout
@@ -82,7 +89,7 @@ func ServerPingInterval(interval time.Duration) ServerOption {
 func NewExtensionManagerServer(name string, sockPath string, opts ...ServerOption) (*ExtensionManagerServer, error) {
 	// Initialize nested registry maps
 	registry := make(map[string](map[string]OsqueryPlugin))
-	for reg, _ := range validRegistryNames {
+	for reg := range validRegistryNames {
 		registry[reg] = make(map[string]OsqueryPlugin)
 	}
 
@@ -107,6 +114,11 @@ func NewExtensionManagerServer(name string, sockPath string, opts ...ServerOptio
 	return manager, nil
 }
 
+// GetClient returns the extension manager client.
+func (s *ExtensionManagerServer) GetClient() ExtensionManager {
+	return s.serverClient
+}
+
 // RegisterPlugin adds one or more OsqueryPlugins to this extension manager.
 func (s *ExtensionManagerServer) RegisterPlugin(plugins ...OsqueryPlugin) {
 	s.mutex.Lock()
@@ -121,7 +133,7 @@ func (s *ExtensionManagerServer) RegisterPlugin(plugins ...OsqueryPlugin) {
 
 func (s *ExtensionManagerServer) genRegistry() osquery.ExtensionRegistry {
 	registry := osquery.ExtensionRegistry{}
-	for regName, _ := range s.registry {
+	for regName := range s.registry {
 		registry[regName] = osquery.ExtensionRouteTable{}
 		for _, plugin := range s.registry[regName] {
 			registry[regName][plugin.Name()] = plugin.Routes()
@@ -142,7 +154,8 @@ func (s *ExtensionManagerServer) Start() error {
 
 		stat, err := s.serverClient.RegisterExtension(
 			&osquery.InternalExtensionInfo{
-				Name: s.name,
+				Name:    s.name,
+				Version: s.version,
 			},
 			registry,
 		)
