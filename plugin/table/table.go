@@ -209,14 +209,17 @@ type constraintListJSON struct {
 }
 
 func parseQueryContext(ctxJSON string) (*QueryContext, error) {
-	var parsed queryContextJSON
+	ctx := QueryContext{map[string]ConstraintList{}}
+	if ctxJSON == "" {
+		return &ctx, nil
+	}
 
+	var parsed queryContextJSON
 	err := json.Unmarshal([]byte(ctxJSON), &parsed)
 	if err != nil {
 		return nil, errors.Wrap(err, "unmarshaling context JSON")
 	}
 
-	ctx := QueryContext{map[string]ConstraintList{}}
 	for _, cList := range parsed.Constraints {
 		constraints, err := parseConstraintList(cList.List)
 		if err != nil {

@@ -124,14 +124,14 @@ func TestParseConstraintList(t *testing.T) {
 		{
 			json: `[{"op":"2","expr":"foo"}]`,
 			constraints: []Constraint{
-				Constraint{OperatorEquals, "foo"},
+				{OperatorEquals, "foo"},
 			},
 		},
 		{
 			json: `[{"op":"4","expr":"3"},{"op":"16","expr":"4"}]`,
 			constraints: []Constraint{
-				Constraint{OperatorGreaterThan, "3"},
-				Constraint{OperatorLessThan, "4"},
+				{OperatorGreaterThan, "3"},
+				{OperatorLessThan, "4"},
 			},
 		},
 	}
@@ -155,8 +155,8 @@ func TestParseQueryContext(t *testing.T) {
 		shouldErr bool
 	}{
 		{
-			json:      "",
-			shouldErr: true,
+			json:    "",
+			context: QueryContext{map[string]ConstraintList{}},
 		},
 		{
 			json: `
@@ -190,10 +190,10 @@ func TestParseQueryContext(t *testing.T) {
   ]
 }`,
 			context: QueryContext{map[string]ConstraintList{
-				"big_int": ConstraintList{ColumnTypeBigInt, []Constraint{}},
-				"double":  ConstraintList{ColumnTypeDouble, []Constraint{}},
-				"integer": ConstraintList{ColumnTypeInteger, []Constraint{}},
-				"text":    ConstraintList{ColumnTypeText, []Constraint{{OperatorEquals, "foo"}}},
+				"big_int": {ColumnTypeBigInt, []Constraint{}},
+				"double":  {ColumnTypeDouble, []Constraint{}},
+				"integer": {ColumnTypeInteger, []Constraint{}},
+				"text":    {ColumnTypeText, []Constraint{{OperatorEquals, "foo"}}},
 			}},
 		},
 		{
@@ -234,10 +234,10 @@ func TestParseQueryContext(t *testing.T) {
 }
 `,
 			context: QueryContext{map[string]ConstraintList{
-				"big_int": ConstraintList{ColumnTypeBigInt, []Constraint{}},
-				"double":  ConstraintList{ColumnTypeDouble, []Constraint{{OperatorGreaterThanOrEquals, "3.1"}}},
-				"integer": ConstraintList{ColumnTypeInteger, []Constraint{}},
-				"text":    ConstraintList{ColumnTypeText, []Constraint{{OperatorEquals, "foobar"}}},
+				"big_int": {ColumnTypeBigInt, []Constraint{}},
+				"double":  {ColumnTypeDouble, []Constraint{{OperatorGreaterThanOrEquals, "3.1"}}},
+				"integer": {ColumnTypeInteger, []Constraint{}},
+				"text":    {ColumnTypeText, []Constraint{{OperatorEquals, "foobar"}}},
 			}},
 		},
 	}
@@ -263,8 +263,8 @@ func TestParseVaryingQueryContexts(t *testing.T) {
 			`{"constraints":[{"name":"domain","list":[{"op":"2","expr":"kolide.co"}],"affinity":"TEXT"},{"name":"email","list":"","affinity":"TEXT"}]}`,
 			&QueryContext{
 				Constraints: map[string]ConstraintList{
-					"domain": ConstraintList{Affinity: "TEXT", Constraints: []Constraint{Constraint{Operator: OperatorEquals, Expression: "kolide.co"}}},
-					"email":  ConstraintList{Affinity: "TEXT", Constraints: []Constraint{}},
+					"domain": {Affinity: "TEXT", Constraints: []Constraint{{Operator: OperatorEquals, Expression: "kolide.co"}}},
+					"email":  {Affinity: "TEXT", Constraints: []Constraint{}},
 				},
 			},
 			false,
@@ -273,8 +273,8 @@ func TestParseVaryingQueryContexts(t *testing.T) {
 			`{"constraints":[{"name":"domain","list":[{"op":2,"expr":"kolide.co"}],"affinity":"TEXT"},{"name":"email","list":[],"affinity":"TEXT"}]}`,
 			&QueryContext{
 				Constraints: map[string]ConstraintList{
-					"domain": ConstraintList{Affinity: "TEXT", Constraints: []Constraint{Constraint{Operator: OperatorEquals, Expression: "kolide.co"}}},
-					"email":  ConstraintList{Affinity: "TEXT", Constraints: []Constraint{}},
+					"domain": {Affinity: "TEXT", Constraints: []Constraint{{Operator: OperatorEquals, Expression: "kolide.co"}}},
+					"email":  {Affinity: "TEXT", Constraints: []Constraint{}},
 				},
 			},
 			false,
@@ -283,8 +283,8 @@ func TestParseVaryingQueryContexts(t *testing.T) {
 			`{"constraints":[{"name":"path","list":[{"op":"65","expr":"%foobar"}],"affinity":"TEXT"},{"name":"query","list":[{"op":"2","expr":"kMDItemFSName = \"google*\""}],"affinity":"TEXT"}]}`,
 			&QueryContext{
 				Constraints: map[string]ConstraintList{
-					"path":  ConstraintList{Affinity: "TEXT", Constraints: []Constraint{Constraint{Operator: OperatorLike, Expression: "%foobar"}}},
-					"query": ConstraintList{Affinity: "TEXT", Constraints: []Constraint{Constraint{Operator: OperatorEquals, Expression: "kMDItemFSName = \"google*\""}}},
+					"path":  {Affinity: "TEXT", Constraints: []Constraint{{Operator: OperatorLike, Expression: "%foobar"}}},
+					"query": {Affinity: "TEXT", Constraints: []Constraint{{Operator: OperatorEquals, Expression: "kMDItemFSName = \"google*\""}}},
 				},
 			},
 			false,
@@ -293,8 +293,8 @@ func TestParseVaryingQueryContexts(t *testing.T) {
 			`{"constraints":[{"name":"path","list":[{"op":65,"expr":"%foobar"}],"affinity":"TEXT"},{"name":"query","list":[{"op":2,"expr":"kMDItemFSName = \"google*\""}],"affinity":"TEXT"}]}`,
 			&QueryContext{
 				Constraints: map[string]ConstraintList{
-					"path":  ConstraintList{Affinity: "TEXT", Constraints: []Constraint{Constraint{Operator: OperatorLike, Expression: "%foobar"}}},
-					"query": ConstraintList{Affinity: "TEXT", Constraints: []Constraint{Constraint{Operator: OperatorEquals, Expression: "kMDItemFSName = \"google*\""}}},
+					"path":  {Affinity: "TEXT", Constraints: []Constraint{{Operator: OperatorLike, Expression: "%foobar"}}},
+					"query": {Affinity: "TEXT", Constraints: []Constraint{{Operator: OperatorEquals, Expression: "kMDItemFSName = \"google*\""}}},
 				},
 			},
 			false,
