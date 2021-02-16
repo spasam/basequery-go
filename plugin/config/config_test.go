@@ -18,7 +18,7 @@ func TestConfigPlugin(t *testing.T) {
 		return map[string]string{
 			"conf1": "foobar",
 		}, nil
-	})
+	}, nil)
 
 	// Basic methods
 	assert.Equal(t, "config", plugin.RegistryName())
@@ -38,7 +38,7 @@ func TestConfigPluginErrors(t *testing.T) {
 	plugin := NewPlugin("mock", func(context.Context) (map[string]string, error) {
 		called = true
 		return nil, errors.New("foobar")
-	})
+	}, nil)
 
 	// Call with bad actions
 	assert.Equal(t, int32(1), plugin.Call(context.Background(), osquery.ExtensionPluginRequest{}).Status.Code)

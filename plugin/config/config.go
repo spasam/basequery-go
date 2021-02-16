@@ -5,6 +5,7 @@ package config
 
 import (
 	"context"
+	"log"
 
 	"github.com/Uptycs/basequery-go/gen/osquery"
 )
@@ -15,35 +16,45 @@ import (
 // cancellation in long-running operations.
 type GenerateConfigsFunc func(ctx context.Context) (map[string]string, error)
 
+// RefreshConfigsFunc is called by Osquery to provide latest configuration.
+// Plugin's can optionally implement this method if they are interested in full
+// configuration.
+type RefreshConfigsFunc func(ctx context.Context, request osquery.ExtensionPluginRequest) osquery.ExtensionResponse
+
 // Plugin is an osquery configuration plugin. Plugin implements the OsqueryPlugin
 // interface.
 type Plugin struct {
 	name     string
 	generate GenerateConfigsFunc
+	refresh  RefreshConfigsFunc
 }
 
-// NewConfigPlugin takes a value that implements ConfigPlugin and wraps it with
+// NewPlugin takes a value that implements ConfigPlugin and wraps it with
 // the appropriate methods to satisfy the OsqueryPlugin interface. Use this to
 // easily create configuration plugins.
-func NewPlugin(name string, fn GenerateConfigsFunc) *Plugin {
-	return &Plugin{name: name, generate: fn}
+func NewPlugin(name string, gen GenerateConfigsFunc, ref RefreshConfigsFunc) *Plugin {
+	return &Plugin{name: name, generate: gen, refresh: ref}
 }
 
+// Name return the plugin name.
 func (t *Plugin) Name() string {
 	return t.name
 }
 
-// Registry name for config plugins
+// Registry name for config plugins.
 const configRegistryName = "config"
 
+// RegistryName returns the registry name which is always "config" for config plugin.
 func (t *Plugin) RegistryName() string {
 	return configRegistryName
 }
 
+// Routes returns empty plugin response.
 func (t *Plugin) Routes() osquery.ExtensionPluginResponse {
 	return osquery.ExtensionPluginResponse{}
 }
 
+// Ping returns success status.
 func (t *Plugin) Ping() osquery.ExtensionStatus {
 	return osquery.ExtensionStatus{Code: 0, Message: "OK"}
 }
@@ -54,6 +65,11 @@ const requestActionKey = "action"
 // Action value used when config is requested
 const genConfigAction = "genConfig"
 
+// Action value used when config is refreshed
+const refreshConfigAction = "refresh"
+
+// Call is the entry point method into config plugin. "action" will be part of the request.
+// It should either be "genConfig" or "refresh".
 func (t *Plugin) Call(ctx context.Context, request osquery.ExtensionPluginRequest) osquery.ExtensionResponse {
 	switch request[requestActionKey] {
 	case genConfigAction:
@@ -72,7 +88,17 @@ func (t *Plugin) Call(ctx context.Context, request osquery.ExtensionPluginReques
 			Response: osquery.ExtensionPluginResponse{configs},
 		}
 
+	case refreshConfigAction:
+		if t.refresh != nil {
+			delete(request, requestActionKey)
+			return t.refresh(ctx, request)
+		}
+		return osquery.ExtensionResponse{
+			Status: &osquery.ExtensionStatus{Code: 0, Message: "OK"},
+		}
+
 	default:
+		log.Println("Unknown action for config plugin:", request[requestActionKey])
 		return osquery.ExtensionResponse{
 			Status: &osquery.ExtensionStatus{
 				Code:    1,
@@ -83,4 +109,5 @@ func (t *Plugin) Call(ctx context.Context, request osquery.ExtensionPluginReques
 
 }
 
+// Shutdown plugin and cleanup.
 func (t *Plugin) Shutdown() {}

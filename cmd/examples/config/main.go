@@ -6,14 +6,16 @@ import (
 	"log"
 	"time"
 
-	"github.com/Uptycs/basequery-go"
+	osquery "github.com/Uptycs/basequery-go"
+	gen "github.com/Uptycs/basequery-go/gen/osquery"
 	"github.com/Uptycs/basequery-go/plugin/config"
 )
 
 var (
+	verbose  = flag.Bool("verbose", false, "Log verbose")
 	socket   = flag.String("socket", "", "Path to the extensions UNIX domain socket")
-	timeout  = flag.Int("timeout", 3, "Seconds to wait for autoloaded extensions")
-	interval = flag.Int("interval", 3, "Seconds delay between connectivity checks")
+	timeout  = flag.Int("timeout", 5, "Seconds to wait for autoloaded extensions")
+	interval = flag.Int("interval", 5, "Seconds delay between connectivity checks")
 )
 
 func main() {
@@ -40,21 +42,33 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error creating extension: %s\n", err)
 	}
-	server.RegisterPlugin(config.NewPlugin("example_config", GenerateConfigs))
+	server.RegisterPlugin(config.NewPlugin("example_config", GenerateConfigs, RefreshConfig))
+	log.Println("Starting config extension")
 	if err := server.Run(); err != nil {
 		log.Fatal(err)
 	}
 }
 
+func RefreshConfig(ctx context.Context, request gen.ExtensionPluginRequest) gen.ExtensionResponse {
+	log.Println("Example config extension got refresh request")
+	for k, v := range request {
+		log.Println(k, v)
+	}
+	return gen.ExtensionResponse{
+		Status: &gen.ExtensionStatus{Code: 0, Message: "OK"},
+	}
+}
+
 func GenerateConfigs(ctx context.Context) (map[string]string, error) {
+	log.Println("Sending example extension config")
 	return map[string]string{
 		"config1": `
 {
-  "options": {
+  "options1": {
     "host_identifier": "hostname",
     "schedule_splay_percent": 10
   },
-  "schedule": {
+  "schedule1": {
     "macos_kextstat": {
       "query": "SELECT * FROM kernel_extensions;",
       "interval": 10
