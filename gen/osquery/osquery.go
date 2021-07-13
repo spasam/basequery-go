@@ -2173,6 +2173,7 @@ type ExtensionManager interface {
 	//  - Name
 	//  - Events
 	StreamEvents(ctx context.Context, name string, events ExtensionPluginResponse) (r *ExtensionStatus, err error)
+	GetNodeKey(ctx context.Context) (r string, err error)
 }
 
 type ExtensionManagerClient struct {
@@ -2296,20 +2297,33 @@ func (p *ExtensionManagerClient) StreamEvents(ctx context.Context, name string, 
 	return _result36.GetSuccess(), nil
 }
 
+func (p *ExtensionManagerClient) GetNodeKey(ctx context.Context) (r string, err error) {
+	var _args37 ExtensionManagerGetNodeKeyArgs
+	var _result38 ExtensionManagerGetNodeKeyResult
+	var meta thrift.ResponseMeta
+	meta, err = p.Client_().Call(ctx, "getNodeKey", &_args37, &_result38)
+	p.SetLastResponseMeta_(meta)
+	if err != nil {
+		return
+	}
+	return _result38.GetSuccess(), nil
+}
+
 type ExtensionManagerProcessor struct {
 	*ExtensionProcessor
 }
 
 func NewExtensionManagerProcessor(handler ExtensionManager) *ExtensionManagerProcessor {
-	self37 := &ExtensionManagerProcessor{NewExtensionProcessor(handler)}
-	self37.AddToProcessorMap("extensions", &extensionManagerProcessorExtensions{handler: handler})
-	self37.AddToProcessorMap("options", &extensionManagerProcessorOptions{handler: handler})
-	self37.AddToProcessorMap("registerExtension", &extensionManagerProcessorRegisterExtension{handler: handler})
-	self37.AddToProcessorMap("deregisterExtension", &extensionManagerProcessorDeregisterExtension{handler: handler})
-	self37.AddToProcessorMap("query", &extensionManagerProcessorQuery{handler: handler})
-	self37.AddToProcessorMap("getQueryColumns", &extensionManagerProcessorGetQueryColumns{handler: handler})
-	self37.AddToProcessorMap("streamEvents", &extensionManagerProcessorStreamEvents{handler: handler})
-	return self37
+	self39 := &ExtensionManagerProcessor{NewExtensionProcessor(handler)}
+	self39.AddToProcessorMap("extensions", &extensionManagerProcessorExtensions{handler: handler})
+	self39.AddToProcessorMap("options", &extensionManagerProcessorOptions{handler: handler})
+	self39.AddToProcessorMap("registerExtension", &extensionManagerProcessorRegisterExtension{handler: handler})
+	self39.AddToProcessorMap("deregisterExtension", &extensionManagerProcessorDeregisterExtension{handler: handler})
+	self39.AddToProcessorMap("query", &extensionManagerProcessorQuery{handler: handler})
+	self39.AddToProcessorMap("getQueryColumns", &extensionManagerProcessorGetQueryColumns{handler: handler})
+	self39.AddToProcessorMap("streamEvents", &extensionManagerProcessorStreamEvents{handler: handler})
+	self39.AddToProcessorMap("getNodeKey", &extensionManagerProcessorGetNodeKey{handler: handler})
+	return self39
 }
 
 type extensionManagerProcessorExtensions struct {
@@ -2865,6 +2879,85 @@ func (p *extensionManagerProcessorStreamEvents) Process(ctx context.Context, seq
 	return true, err
 }
 
+type extensionManagerProcessorGetNodeKey struct {
+	handler ExtensionManager
+}
+
+func (p *extensionManagerProcessorGetNodeKey) Process(ctx context.Context, seqId int32, iprot, oprot thrift.TProtocol) (success bool, err thrift.TException) {
+	args := ExtensionManagerGetNodeKeyArgs{}
+	var err2 error
+	if err2 = args.Read(ctx, iprot); err2 != nil {
+		iprot.ReadMessageEnd(ctx)
+		x := thrift.NewTApplicationException(thrift.PROTOCOL_ERROR, err2.Error())
+		oprot.WriteMessageBegin(ctx, "getNodeKey", thrift.EXCEPTION, seqId)
+		x.Write(ctx, oprot)
+		oprot.WriteMessageEnd(ctx)
+		oprot.Flush(ctx)
+		return false, thrift.WrapTException(err2)
+	}
+	iprot.ReadMessageEnd(ctx)
+
+	tickerCancel := func() {}
+	// Start a goroutine to do server side connectivity check.
+	if thrift.ServerConnectivityCheckInterval > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithCancel(ctx)
+		defer cancel()
+		var tickerCtx context.Context
+		tickerCtx, tickerCancel = context.WithCancel(context.Background())
+		defer tickerCancel()
+		go func(ctx context.Context, cancel context.CancelFunc) {
+			ticker := time.NewTicker(thrift.ServerConnectivityCheckInterval)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					if !iprot.Transport().IsOpen() {
+						cancel()
+						return
+					}
+				}
+			}
+		}(tickerCtx, cancel)
+	}
+
+	result := ExtensionManagerGetNodeKeyResult{}
+	var retval string
+	if retval, err2 = p.handler.GetNodeKey(ctx); err2 != nil {
+		tickerCancel()
+		if err2 == thrift.ErrAbandonRequest {
+			return false, thrift.WrapTException(err2)
+		}
+		x := thrift.NewTApplicationException(thrift.INTERNAL_ERROR, "Internal error processing getNodeKey: "+err2.Error())
+		oprot.WriteMessageBegin(ctx, "getNodeKey", thrift.EXCEPTION, seqId)
+		x.Write(ctx, oprot)
+		oprot.WriteMessageEnd(ctx)
+		oprot.Flush(ctx)
+		return true, thrift.WrapTException(err2)
+	} else {
+		result.Success = &retval
+	}
+	tickerCancel()
+	if err2 = oprot.WriteMessageBegin(ctx, "getNodeKey", thrift.REPLY, seqId); err2 != nil {
+		err = thrift.WrapTException(err2)
+	}
+	if err2 = result.Write(ctx, oprot); err == nil && err2 != nil {
+		err = thrift.WrapTException(err2)
+	}
+	if err2 = oprot.WriteMessageEnd(ctx); err == nil && err2 != nil {
+		err = thrift.WrapTException(err2)
+	}
+	if err2 = oprot.Flush(ctx); err == nil && err2 != nil {
+		err = thrift.WrapTException(err2)
+	}
+	if err != nil {
+		return
+	}
+	return true, err
+}
+
 // HELPER FUNCTIONS AND STRUCTURES
 
 type ExtensionManagerExtensionsArgs struct {
@@ -2988,18 +3081,18 @@ func (p *ExtensionManagerExtensionsResult) ReadField0(ctx context.Context, iprot
 	tMap := make(InternalExtensionList, size)
 	p.Success = tMap
 	for i := 0; i < size; i++ {
-		var _key38 ExtensionRouteUUID
+		var _key40 ExtensionRouteUUID
 		if v, err := iprot.ReadI64(ctx); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
 			temp := ExtensionRouteUUID(v)
-			_key38 = temp
+			_key40 = temp
 		}
-		_val39 := &InternalExtensionInfo{}
-		if err := _val39.Read(ctx, iprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val39), err)
+		_val41 := &InternalExtensionInfo{}
+		if err := _val41.Read(ctx, iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val41), err)
 		}
-		p.Success[_key38] = _val39
+		p.Success[_key40] = _val41
 	}
 	if err := iprot.ReadMapEnd(ctx); err != nil {
 		return thrift.PrependError("error reading map end: ", err)
@@ -3179,17 +3272,17 @@ func (p *ExtensionManagerOptionsResult) ReadField0(ctx context.Context, iprot th
 	tMap := make(InternalOptionList, size)
 	p.Success = tMap
 	for i := 0; i < size; i++ {
-		var _key40 string
+		var _key42 string
 		if v, err := iprot.ReadString(ctx); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
-			_key40 = v
+			_key42 = v
 		}
-		_val41 := &InternalOptionInfo{}
-		if err := _val41.Read(ctx, iprot); err != nil {
-			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val41), err)
+		_val43 := &InternalOptionInfo{}
+		if err := _val43.Read(ctx, iprot); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T error reading struct: ", _val43), err)
 		}
-		p.Success[_key40] = _val41
+		p.Success[_key42] = _val43
 	}
 	if err := iprot.ReadMapEnd(ctx); err != nil {
 		return thrift.PrependError("error reading map end: ", err)
@@ -3341,67 +3434,67 @@ func (p *ExtensionManagerRegisterExtensionArgs) ReadField2(ctx context.Context, 
 	tMap := make(ExtensionRegistry, size)
 	p.Registry = tMap
 	for i := 0; i < size; i++ {
-		var _key42 string
+		var _key44 string
 		if v, err := iprot.ReadString(ctx); err != nil {
 			return thrift.PrependError("error reading field 0: ", err)
 		} else {
-			_key42 = v
+			_key44 = v
 		}
 		_, _, size, err := iprot.ReadMapBegin(ctx)
 		if err != nil {
 			return thrift.PrependError("error reading map begin: ", err)
 		}
 		tMap := make(ExtensionRouteTable, size)
-		_val43 := tMap
+		_val45 := tMap
 		for i := 0; i < size; i++ {
-			var _key44 string
+			var _key46 string
 			if v, err := iprot.ReadString(ctx); err != nil {
 				return thrift.PrependError("error reading field 0: ", err)
 			} else {
-				_key44 = v
+				_key46 = v
 			}
 			_, size, err := iprot.ReadListBegin(ctx)
 			if err != nil {
 				return thrift.PrependError("error reading list begin: ", err)
 			}
 			tSlice := make(ExtensionPluginResponse, 0, size)
-			_val45 := tSlice
+			_val47 := tSlice
 			for i := 0; i < size; i++ {
 				_, _, size, err := iprot.ReadMapBegin(ctx)
 				if err != nil {
 					return thrift.PrependError("error reading map begin: ", err)
 				}
 				tMap := make(map[string]string, size)
-				_elem46 := tMap
+				_elem48 := tMap
 				for i := 0; i < size; i++ {
-					var _key47 string
+					var _key49 string
 					if v, err := iprot.ReadString(ctx); err != nil {
 						return thrift.PrependError("error reading field 0: ", err)
 					} else {
-						_key47 = v
+						_key49 = v
 					}
-					var _val48 string
+					var _val50 string
 					if v, err := iprot.ReadString(ctx); err != nil {
 						return thrift.PrependError("error reading field 0: ", err)
 					} else {
-						_val48 = v
+						_val50 = v
 					}
-					_elem46[_key47] = _val48
+					_elem48[_key49] = _val50
 				}
 				if err := iprot.ReadMapEnd(ctx); err != nil {
 					return thrift.PrependError("error reading map end: ", err)
 				}
-				_val45 = append(_val45, _elem46)
+				_val47 = append(_val47, _elem48)
 			}
 			if err := iprot.ReadListEnd(ctx); err != nil {
 				return thrift.PrependError("error reading list end: ", err)
 			}
-			_val43[_key44] = _val45
+			_val45[_key46] = _val47
 		}
 		if err := iprot.ReadMapEnd(ctx); err != nil {
 			return thrift.PrependError("error reading map end: ", err)
 		}
-		p.Registry[_key42] = _val43
+		p.Registry[_key44] = _val45
 	}
 	if err := iprot.ReadMapEnd(ctx); err != nil {
 		return thrift.PrependError("error reading map end: ", err)
@@ -4328,26 +4421,26 @@ func (p *ExtensionManagerStreamEventsArgs) ReadField2(ctx context.Context, iprot
 			return thrift.PrependError("error reading map begin: ", err)
 		}
 		tMap := make(map[string]string, size)
-		_elem49 := tMap
+		_elem51 := tMap
 		for i := 0; i < size; i++ {
-			var _key50 string
+			var _key52 string
 			if v, err := iprot.ReadString(ctx); err != nil {
 				return thrift.PrependError("error reading field 0: ", err)
 			} else {
-				_key50 = v
+				_key52 = v
 			}
-			var _val51 string
+			var _val53 string
 			if v, err := iprot.ReadString(ctx); err != nil {
 				return thrift.PrependError("error reading field 0: ", err)
 			} else {
-				_val51 = v
+				_val53 = v
 			}
-			_elem49[_key50] = _val51
+			_elem51[_key52] = _val53
 		}
 		if err := iprot.ReadMapEnd(ctx); err != nil {
 			return thrift.PrependError("error reading map end: ", err)
 		}
-		p.Events = append(p.Events, _elem49)
+		p.Events = append(p.Events, _elem51)
 	}
 	if err := iprot.ReadListEnd(ctx); err != nil {
 		return thrift.PrependError("error reading list end: ", err)
@@ -4535,4 +4628,169 @@ func (p *ExtensionManagerStreamEventsResult) String() string {
 		return "<nil>"
 	}
 	return fmt.Sprintf("ExtensionManagerStreamEventsResult(%+v)", *p)
+}
+
+type ExtensionManagerGetNodeKeyArgs struct {
+}
+
+func NewExtensionManagerGetNodeKeyArgs() *ExtensionManagerGetNodeKeyArgs {
+	return &ExtensionManagerGetNodeKeyArgs{}
+}
+
+func (p *ExtensionManagerGetNodeKeyArgs) Read(ctx context.Context, iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+			return err
+		}
+		if err := iprot.ReadFieldEnd(ctx); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ExtensionManagerGetNodeKeyArgs) Write(ctx context.Context, oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin(ctx, "getNodeKey_args"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+	}
+	if err := oprot.WriteFieldStop(ctx); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(ctx); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ExtensionManagerGetNodeKeyArgs) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExtensionManagerGetNodeKeyArgs(%+v)", *p)
+}
+
+// Attributes:
+//  - Success
+type ExtensionManagerGetNodeKeyResult struct {
+	Success *string `thrift:"success,0" db:"success" json:"success,omitempty"`
+}
+
+func NewExtensionManagerGetNodeKeyResult() *ExtensionManagerGetNodeKeyResult {
+	return &ExtensionManagerGetNodeKeyResult{}
+}
+
+var ExtensionManagerGetNodeKeyResult_Success_DEFAULT string
+
+func (p *ExtensionManagerGetNodeKeyResult) GetSuccess() string {
+	if !p.IsSetSuccess() {
+		return ExtensionManagerGetNodeKeyResult_Success_DEFAULT
+	}
+	return *p.Success
+}
+func (p *ExtensionManagerGetNodeKeyResult) IsSetSuccess() bool {
+	return p.Success != nil
+}
+
+func (p *ExtensionManagerGetNodeKeyResult) Read(ctx context.Context, iprot thrift.TProtocol) error {
+	if _, err := iprot.ReadStructBegin(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read error: ", p), err)
+	}
+
+	for {
+		_, fieldTypeId, fieldId, err := iprot.ReadFieldBegin(ctx)
+		if err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T field %d read error: ", p, fieldId), err)
+		}
+		if fieldTypeId == thrift.STOP {
+			break
+		}
+		switch fieldId {
+		case 0:
+			if fieldTypeId == thrift.STRING {
+				if err := p.ReadField0(ctx, iprot); err != nil {
+					return err
+				}
+			} else {
+				if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+					return err
+				}
+			}
+		default:
+			if err := iprot.Skip(ctx, fieldTypeId); err != nil {
+				return err
+			}
+		}
+		if err := iprot.ReadFieldEnd(ctx); err != nil {
+			return err
+		}
+	}
+	if err := iprot.ReadStructEnd(ctx); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T read struct end error: ", p), err)
+	}
+	return nil
+}
+
+func (p *ExtensionManagerGetNodeKeyResult) ReadField0(ctx context.Context, iprot thrift.TProtocol) error {
+	if v, err := iprot.ReadString(ctx); err != nil {
+		return thrift.PrependError("error reading field 0: ", err)
+	} else {
+		p.Success = &v
+	}
+	return nil
+}
+
+func (p *ExtensionManagerGetNodeKeyResult) Write(ctx context.Context, oprot thrift.TProtocol) error {
+	if err := oprot.WriteStructBegin(ctx, "getNodeKey_result"); err != nil {
+		return thrift.PrependError(fmt.Sprintf("%T write struct begin error: ", p), err)
+	}
+	if p != nil {
+		if err := p.writeField0(ctx, oprot); err != nil {
+			return err
+		}
+	}
+	if err := oprot.WriteFieldStop(ctx); err != nil {
+		return thrift.PrependError("write field stop error: ", err)
+	}
+	if err := oprot.WriteStructEnd(ctx); err != nil {
+		return thrift.PrependError("write struct stop error: ", err)
+	}
+	return nil
+}
+
+func (p *ExtensionManagerGetNodeKeyResult) writeField0(ctx context.Context, oprot thrift.TProtocol) (err error) {
+	if p.IsSetSuccess() {
+		if err := oprot.WriteFieldBegin(ctx, "success", thrift.STRING, 0); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field begin error 0:success: ", p), err)
+		}
+		if err := oprot.WriteString(ctx, string(*p.Success)); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T.success (0) field write error: ", p), err)
+		}
+		if err := oprot.WriteFieldEnd(ctx); err != nil {
+			return thrift.PrependError(fmt.Sprintf("%T write field end error 0:success: ", p), err)
+		}
+	}
+	return err
+}
+
+func (p *ExtensionManagerGetNodeKeyResult) String() string {
+	if p == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("ExtensionManagerGetNodeKeyResult(%+v)", *p)
 }

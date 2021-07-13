@@ -108,4 +108,6 @@ service ExtensionManager extends Extension {
     /// Batch of events for the event table.
     2:ExtensionPluginResponse events,
   ),
+  /// Return the TLS node key.
+  string getNodeKey(),
 }

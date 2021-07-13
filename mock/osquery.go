@@ -32,6 +32,8 @@ type GetQueryColumnsFunc func(ctx context.Context, sql string) (*osquery.Extensi
 
 type StreamEventsFunc func(ctx context.Context, name string, events osquery.ExtensionPluginResponse) (*osquery.ExtensionStatus, error)
 
+type GetNodeKeyFunc func(ctx context.Context) (string, error)
+
 type ExtensionManager struct {
 	CloseFunc        CloseFunc
 	CloseFuncInvoked bool
@@ -65,6 +67,9 @@ type ExtensionManager struct {
 
 	StreamEventsFunc        StreamEventsFunc
 	StreamEventsFuncInvoked bool
+
+	GetNodeKeyFunc        GetNodeKeyFunc
+	GetNodeKeyFuncInvoked bool
 }
 
 func (m *ExtensionManager) Close() {
@@ -120,4 +125,9 @@ func (m *ExtensionManager) GetQueryColumns(ctx context.Context, sql string) (*os
 func (m *ExtensionManager) StreamEvents(ctx context.Context, name string, events osquery.ExtensionPluginResponse) (*osquery.ExtensionStatus, error) {
 	m.StreamEventsFuncInvoked = true
 	return m.StreamEventsFunc(ctx, name, events)
+}
+
+func (m *ExtensionManager) GetNodeKey(ctx context.Context) (string, error) {
+	m.GetNodeKeyFuncInvoked = true
+	return m.GetNodeKeyFunc(ctx)
 }

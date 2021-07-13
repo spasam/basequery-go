@@ -21,6 +21,7 @@ type ExtensionManager interface {
 	Query(sql string) (*osquery.ExtensionResponse, error)
 	GetQueryColumns(sql string) (*osquery.ExtensionResponse, error)
 	StreamEvents(name string, events osquery.ExtensionPluginResponse) (*osquery.ExtensionStatus, error)
+	GetNodeKey() (string, error)
 }
 
 // ExtensionManagerClient is a wrapper for the osquery Thrift extensions API.
@@ -125,4 +126,9 @@ func (c *ExtensionManagerClient) GetQueryColumns(sql string) (*osquery.Extension
 // StreamEvents sends a batch of events for a event'ed table.
 func (c *ExtensionManagerClient) StreamEvents(name string, events osquery.ExtensionPluginResponse) (*osquery.ExtensionStatus, error) {
 	return c.Client.StreamEvents(context.Background(), name, events)
+}
+
+// GetNodeKey returns TLS node key when enroll plugin is set to "tls".
+func (c *ExtensionManagerClient) GetNodeKey() (string, error) {
+	return c.Client.GetNodeKey(context.Background())
 }

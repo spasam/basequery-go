@@ -24,6 +24,8 @@ type GetQueryColumnsFunc func(sql string) (*osquery.ExtensionResponse, error)
 
 type StreamEventsFunc func(name string, events osquery.ExtensionPluginResponse) (*osquery.ExtensionStatus, error)
 
+type GetNodeKeyFunc func() (string, error)
+
 type MockExtensionManager struct {
 	CloseFunc        CloseFunc
 	CloseFuncInvoked bool
@@ -51,6 +53,9 @@ type MockExtensionManager struct {
 
 	StreamEventsFunc        StreamEventsFunc
 	StreamEventsFuncInvoked bool
+
+	GetNodeKeyFunc        GetNodeKeyFunc
+	GetNodeKeyFuncInvoked bool
 }
 
 func (m *MockExtensionManager) Close() {
@@ -96,4 +101,9 @@ func (m *MockExtensionManager) GetQueryColumns(sql string) (*osquery.ExtensionRe
 func (m *MockExtensionManager) StreamEvents(name string, events osquery.ExtensionPluginResponse) (*osquery.ExtensionStatus, error) {
 	m.StreamEventsFuncInvoked = true
 	return m.StreamEventsFunc(name, events)
+}
+
+func (m *MockExtensionManager) GetNodeKey() (string, error) {
+	m.GetNodeKeyFuncInvoked = true
+	return m.GetNodeKey()
 }
