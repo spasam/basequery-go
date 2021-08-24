@@ -36,6 +36,7 @@ func Open(sockPath string, timeout time.Duration) (*thrift.TSocket, error) {
 	return trans, nil
 }
 
+// OpenServer resolves the specified listenPath and creates new thrift server socket on specified listen path.
 func OpenServer(listenPath string, timeout time.Duration) (*thrift.TServerSocket, error) {
 	addr, err := net.ResolveUnixAddr("unix", listenPath)
 	if err != nil {

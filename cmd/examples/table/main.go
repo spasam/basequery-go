@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/Uptycs/basequery-go"
+	osquery "github.com/Uptycs/basequery-go"
 	"github.com/Uptycs/basequery-go/plugin/table"
 )
 
@@ -44,6 +44,7 @@ func main() {
 	}
 }
 
+// ExampleColumns returns the example table columns.
 func ExampleColumns() []table.ColumnDefinition {
 	return []table.ColumnDefinition{
 		table.TextColumn("text"),
@@ -53,6 +54,7 @@ func ExampleColumns() []table.ColumnDefinition {
 	}
 }
 
+// ExampleGenerate is called when this table is invoked. It returns one row static data.
 func ExampleGenerate(ctx context.Context, queryContext table.QueryContext) ([]map[string]string, error) {
 	return []map[string]string{
 		{

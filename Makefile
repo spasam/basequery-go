@@ -1,7 +1,7 @@
 PATH := $(GOPATH)/bin:$(PATH)
 export GO111MODULE=on
 
-all: gen test examples
+all: test examples
 
 go-mod-check:
 	@go help mod > /dev/null || (echo "Your go is too old, no modules. Seek help." && exit 1)
@@ -14,10 +14,10 @@ deps-go: go-mod-check go-mod-download
 deps: deps-go
 
 gen: ./osquery.thrift
-	mkdir -p ./gen
-	thrift --gen go:package_prefix=github.com/Uptycs/basequery-go/gen/ -out ./gen ./osquery.thrift
-	rm -rf gen/osquery/extension-remote gen/osquery/extension_manager-remote
-	gofmt -w ./gen
+	@mkdir -p ./gen
+	@thrift --gen go:package_prefix=github.com/Uptycs/basequery-go/gen/ -out ./gen ./osquery.thrift
+	@rm -rf gen/osquery/extension-remote gen/osquery/extension_manager-remote
+	@gofmt -w ./gen
 
 examples: deps
 	@mkdir -p build
@@ -27,6 +27,6 @@ test:
 	@go test -race -cover ./...
 
 clean:
-	@rm -rf ./build ./gen
+	@rm -rf ./build
 
-.PHONY: all
+.PHONY: all gen

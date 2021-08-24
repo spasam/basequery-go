@@ -67,6 +67,7 @@ func NewPlugin(name string, getQueries GetQueriesFunc, writeResults WriteResults
 	return &Plugin{name: name, getQueries: getQueries, writeResults: writeResults}
 }
 
+// Name returns distributed plugin name.
 func (t *Plugin) Name() string {
 	return t.name
 }
@@ -74,14 +75,17 @@ func (t *Plugin) Name() string {
 // Registry name for distributed plugins
 const distributedRegistryName = "distributed"
 
+// RegistryName returns the static string "distributed" for this plugin.
 func (t *Plugin) RegistryName() string {
 	return distributedRegistryName
 }
 
+// Routes returns empty plugin response for distributed plugin.
 func (t *Plugin) Routes() osquery.ExtensionPluginResponse {
 	return osquery.ExtensionPluginResponse{}
 }
 
+// Ping returns static OK response.
 func (t *Plugin) Ping() osquery.ExtensionStatus {
 	return osquery.ExtensionStatus{Code: 0, Message: "OK"}
 }
@@ -215,6 +219,9 @@ func convertRows(rows []interface{}) ([]map[string]string, error) {
 	return results, nil
 }
 
+// Call is the function invoked for distributed read and write requests. "request" should have "action" that is
+// "getQueriesAction" or "writeResultsAction". "getQueriesAction" should query the distributed endpoint and get
+// pending queries to run. "writeResultsAction" is used when there are distributed write response to be sent to target.
 func (t *Plugin) Call(ctx context.Context, request osquery.ExtensionPluginRequest) osquery.ExtensionResponse {
 	switch request[requestActionKey] {
 	case getQueriesAction:
@@ -289,4 +296,5 @@ func (t *Plugin) Call(ctx context.Context, request osquery.ExtensionPluginReques
 
 }
 
+// Shutdown is a no-op for distributed plugins.
 func (t *Plugin) Shutdown() {}

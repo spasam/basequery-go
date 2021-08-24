@@ -49,6 +49,7 @@ func main() {
 	}
 }
 
+// RefreshConfig callback function invoked when config is refreshed.
 func RefreshConfig(ctx context.Context, request gen.ExtensionPluginRequest) gen.ExtensionResponse {
 	log.Println("Example config extension got refresh request")
 	for k, v := range request {
@@ -59,6 +60,7 @@ func RefreshConfig(ctx context.Context, request gen.ExtensionPluginRequest) gen.
 	}
 }
 
+// GenerateConfigs callback function invoked to get the config.
 func GenerateConfigs(ctx context.Context) (map[string]string, error) {
 	log.Println("Sending example extension config")
 	return map[string]string{

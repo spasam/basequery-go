@@ -16,7 +16,7 @@ func TestQueryRows(t *testing.T) {
 
 	// Transport related error
 	mock.QueryFunc = func(ctx context.Context, sql string) (*osquery.ExtensionResponse, error) {
-		return nil, errors.New("boom!")
+		return nil, errors.New("Boom")
 	}
 	rows, err := client.QueryRows("select 1")
 	assert.NotNil(t, err)

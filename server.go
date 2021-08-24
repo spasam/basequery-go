@@ -3,6 +3,8 @@ package osquery
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -11,9 +13,11 @@ import (
 	"github.com/Uptycs/basequery-go/gen/osquery"
 	"github.com/Uptycs/basequery-go/transport"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-type OsqueryPlugin interface {
+// Plugin exposes the basequery Plugin interface.
+type Plugin interface {
 	// Name is the name used to refer to the plugin (eg. the name of the
 	// table the plugin implements).
 	Name() string
@@ -40,17 +44,19 @@ const defaultPingInterval = 5 * time.Second
 // API. Plugins can register with an extension manager, which handles the
 // communication with the osquery process.
 type ExtensionManagerServer struct {
-	name         string
-	version      string
-	sockPath     string
-	serverClient ExtensionManager
-	registry     map[string](map[string]OsqueryPlugin)
-	server       thrift.TServer
-	transport    thrift.TServerTransport
-	timeout      time.Duration
-	pingInterval time.Duration // How often to ping osquery server
-	mutex        sync.Mutex
-	started      bool // Used to ensure tests wait until the server is actually started
+	name           string
+	version        string
+	sockPath       string
+	serverClient   ExtensionManager
+	registry       map[string](map[string]Plugin)
+	promServer     *http.Server
+	server         thrift.TServer
+	transport      thrift.TServerTransport
+	timeout        time.Duration
+	pingInterval   time.Duration // How often to ping osquery server
+	prometheusPort uint16        // Expose prometheus metrics, if > 0
+	mutex          sync.Mutex
+	started        bool // Used to ensure tests wait until the server is actually started
 }
 
 // validRegistryNames contains the allowable RegistryName() values. If a plugin
@@ -62,23 +68,35 @@ var validRegistryNames = map[string]bool{
 	"distributed": true,
 }
 
+// ServerOption is function for setting extension manager server options.
 type ServerOption func(*ExtensionManagerServer)
 
+// ServerVersion can be used to specify the basequery SDK version.
 func ServerVersion(version string) ServerOption {
 	return func(s *ExtensionManagerServer) {
 		s.version = version
 	}
 }
 
+// ServerTimeout sets timeout duration for thrift socket.
 func ServerTimeout(timeout time.Duration) ServerOption {
 	return func(s *ExtensionManagerServer) {
 		s.timeout = timeout
 	}
 }
 
+// ServerPingInterval can be used to configure health check ping interval/frequency.
 func ServerPingInterval(interval time.Duration) ServerOption {
 	return func(s *ExtensionManagerServer) {
 		s.pingInterval = interval
+	}
+}
+
+// ServerPrometheusPort is used to specify the port on which prometheus metrics will be exposed.
+// By default this is disabled (0). A positive integer port value should be specified to enable it.
+func ServerPrometheusPort(port uint16) ServerOption {
+	return func(s *ExtensionManagerServer) {
+		s.prometheusPort = port
 	}
 }
 
@@ -88,17 +106,18 @@ func ServerPingInterval(interval time.Duration) ServerOption {
 // error.
 func NewExtensionManagerServer(name string, sockPath string, opts ...ServerOption) (*ExtensionManagerServer, error) {
 	// Initialize nested registry maps
-	registry := make(map[string](map[string]OsqueryPlugin))
+	registry := make(map[string](map[string]Plugin))
 	for reg := range validRegistryNames {
-		registry[reg] = make(map[string]OsqueryPlugin)
+		registry[reg] = make(map[string]Plugin)
 	}
 
 	manager := &ExtensionManagerServer{
-		name:         name,
-		sockPath:     sockPath,
-		registry:     registry,
-		timeout:      defaultTimeout,
-		pingInterval: defaultPingInterval,
+		name:           name,
+		sockPath:       sockPath,
+		registry:       registry,
+		timeout:        defaultTimeout,
+		pingInterval:   defaultPingInterval,
+		prometheusPort: 0,
 	}
 
 	for _, opt := range opts {
@@ -120,7 +139,7 @@ func (s *ExtensionManagerServer) GetClient() ExtensionManager {
 }
 
 // RegisterPlugin adds one or more OsqueryPlugins to this extension manager.
-func (s *ExtensionManagerServer) RegisterPlugin(plugins ...OsqueryPlugin) {
+func (s *ExtensionManagerServer) RegisterPlugin(plugins ...Plugin) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	for _, plugin := range plugins {
@@ -179,6 +198,16 @@ func (s *ExtensionManagerServer) Start() error {
 		s.server = thrift.NewTSimpleServer2(processor, s.transport)
 		server = s.server
 
+		if s.prometheusPort > 0 {
+			mux := http.NewServeMux()
+			mux.Handle("/metrics", promhttp.Handler())
+
+			s.promServer = &http.Server{
+				Addr:    strconv.Itoa(int(s.prometheusPort)),
+				Handler: mux,
+			}
+		}
+
 		s.started = true
 
 		return nil
@@ -199,6 +228,12 @@ func (s *ExtensionManagerServer) Run() error {
 		errc <- s.Start()
 	}()
 
+	if s.promServer != nil {
+		go func() {
+			errc <- s.promServer.ListenAndServe()
+		}()
+	}
+
 	// Watch for the osquery process going away. If so, initiate shutdown.
 	go func() {
 		for {
@@ -217,6 +252,10 @@ func (s *ExtensionManagerServer) Run() error {
 	}()
 
 	err := <-errc
+	if s.promServer != nil {
+		// Ignore promtheus shutdown errors
+		s.promServer.Shutdown(context.Background())
+	}
 	if err := s.Shutdown(context.Background()); err != nil {
 		return err
 	}
