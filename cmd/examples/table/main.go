@@ -27,12 +27,14 @@ func main() {
 	serverPingInterval := osquery.ServerPingInterval(
 		time.Second * time.Duration(*interval),
 	)
+	serverPromPort := osquery.ServerPrometheusPort(3000)
 
 	server, err := osquery.NewExtensionManagerServer(
 		"example_extension",
 		*socket,
 		serverTimeout,
 		serverPingInterval,
+		serverPromPort,
 	)
 
 	if err != nil {

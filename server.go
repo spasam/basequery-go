@@ -13,6 +13,8 @@ import (
 	"github.com/Uptycs/basequery-go/gen/osquery"
 	"github.com/Uptycs/basequery-go/transport"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -50,6 +52,8 @@ type ExtensionManagerServer struct {
 	serverClient   ExtensionManager
 	registry       map[string](map[string]Plugin)
 	promServer     *http.Server
+	pluginCounter  *prometheus.CounterVec
+	pluginTime     *prometheus.HistogramVec
 	server         thrift.TServer
 	transport      thrift.TServerTransport
 	timeout        time.Duration
@@ -203,9 +207,18 @@ func (s *ExtensionManagerServer) Start() error {
 			mux.Handle("/metrics", promhttp.Handler())
 
 			s.promServer = &http.Server{
-				Addr:    strconv.Itoa(int(s.prometheusPort)),
+				Addr:    ":" + strconv.Itoa(int(s.prometheusPort)),
 				Handler: mux,
 			}
+
+			s.pluginCounter = promauto.NewCounterVec(prometheus.CounterOpts{
+				Name: "plugin_calls",
+				Help: "Number of calls to a plugin action",
+			}, []string{"plugin_name", "plugin_action"})
+			s.pluginTime = promauto.NewHistogramVec(prometheus.HistogramOpts{
+				Name: "plugin_duration_seconds",
+				Help: "Histogram for plugin action duration in seconds",
+			}, []string{"plugin_name", "plugin_action"})
 		}
 
 		s.started = true
@@ -215,6 +228,12 @@ func (s *ExtensionManagerServer) Start() error {
 
 	if err != nil {
 		return err
+	}
+
+	if s.promServer != nil {
+		go func() {
+			s.promServer.ListenAndServe()
+		}()
 	}
 
 	return server.Serve()
@@ -227,12 +246,6 @@ func (s *ExtensionManagerServer) Run() error {
 	go func() {
 		errc <- s.Start()
 	}()
-
-	if s.promServer != nil {
-		go func() {
-			errc <- s.promServer.ListenAndServe()
-		}()
-	}
 
 	// Watch for the osquery process going away. If so, initiate shutdown.
 	go func() {
@@ -290,7 +303,15 @@ func (s *ExtensionManagerServer) Call(ctx context.Context, registry string, item
 		}, nil
 	}
 
+	if s.pluginCounter != nil {
+		s.pluginCounter.WithLabelValues(item, request["action"]).Inc()
+	}
+	if s.pluginTime != nil {
+		timer := prometheus.NewTimer(s.pluginTime.WithLabelValues(item, request["action"]))
+		defer timer.ObserveDuration()
+	}
 	response := plugin.Call(context.Background(), request)
+
 	return &response, nil
 }
 
