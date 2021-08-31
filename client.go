@@ -11,6 +11,7 @@ import (
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
+// ExtensionManager is the interface for thrift bindings supported by basequery
 type ExtensionManager interface {
 	Close()
 	Ping() (*osquery.ExtensionStatus, error)

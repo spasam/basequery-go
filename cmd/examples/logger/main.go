@@ -5,7 +5,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/Uptycs/basequery-go"
+	osquery "github.com/Uptycs/basequery-go"
 	"github.com/Uptycs/basequery-go/plugin/logger"
 )
 
@@ -25,6 +25,7 @@ func main() {
 	}
 }
 
+// LogString logs the provided text to console.
 func LogString(ctx context.Context, typ logger.LogType, logText string) error {
 	log.Printf("%s: %s\n", typ, logText)
 	return nil

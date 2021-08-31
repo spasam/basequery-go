@@ -22,16 +22,16 @@ import (
 
 // Verify that an error in server.Start will return an error instead of deadlock.
 func TestNoDeadlockOnError(t *testing.T) {
-	registry := make(map[string](map[string]OsqueryPlugin))
-	for reg, _ := range validRegistryNames {
-		registry[reg] = make(map[string]OsqueryPlugin)
+	registry := make(map[string](map[string]Plugin))
+	for reg := range validRegistryNames {
+		registry[reg] = make(map[string]Plugin)
 	}
 	mut := sync.Mutex{}
 	mock := &MockExtensionManager{
 		RegisterExtensionFunc: func(info *osquery.InternalExtensionInfo, registry osquery.ExtensionRegistry) (*osquery.ExtensionStatus, error) {
 			mut.Lock()
 			defer mut.Unlock()
-			return nil, errors.New("boom!")
+			return nil, errors.New("Boom")
 		},
 		PingFunc: func() (*osquery.ExtensionStatus, error) {
 			return &osquery.ExtensionStatus{}, nil
@@ -58,9 +58,9 @@ func TestNoDeadlockOnError(t *testing.T) {
 // Ensure that the extension server will shutdown and return if the osquery
 // instance it is talking to stops responding to pings.
 func TestShutdownWhenPingFails(t *testing.T) {
-	registry := make(map[string](map[string]OsqueryPlugin))
-	for reg, _ := range validRegistryNames {
-		registry[reg] = make(map[string]OsqueryPlugin)
+	registry := make(map[string](map[string]Plugin))
+	for reg := range validRegistryNames {
+		registry[reg] = make(map[string]Plugin)
 	}
 	mock := &MockExtensionManager{
 		RegisterExtensionFunc: func(info *osquery.InternalExtensionInfo, registry osquery.ExtensionRegistry) (*osquery.ExtensionStatus, error) {

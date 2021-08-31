@@ -33,22 +33,28 @@ func NewPlugin(name string, fn LogFunc) *Plugin {
 	return &Plugin{name: name, logFn: fn}
 }
 
+// Name returns the logger plugin name.
 func (t *Plugin) Name() string {
 	return t.name
 }
 
+// RegistryName always returns static string "logger" for logger plugins.
 func (t *Plugin) RegistryName() string {
 	return "logger"
 }
 
+// Routes returns empty plugin response for logger plugins.
 func (t *Plugin) Routes() osquery.ExtensionPluginResponse {
 	return []map[string]string{}
 }
 
+// Ping returns static "OK" response.
 func (t *Plugin) Ping() osquery.ExtensionStatus {
 	return osquery.ExtensionStatus{Code: 0, Message: "OK"}
 }
 
+// Call is invoked to log the specified request details. Depending on the type of logger implementation,
+// contents of the requests can be saved to a file, sent to remote destination etc after necessary formatting.
 func (t *Plugin) Call(ctx context.Context, request osquery.ExtensionPluginRequest) osquery.ExtensionResponse {
 	var err error
 	if log, ok := request["string"]; ok {
@@ -112,16 +118,22 @@ func (t *Plugin) Call(ctx context.Context, request osquery.ExtensionPluginReques
 	}
 }
 
+// Shutdown is a no-op function for logger plugins.
 func (t *Plugin) Shutdown() {}
 
 //LogType encodes the type of log osquery is outputting.
 type LogType int
 
 const (
+	// LogTypeString to log a string
 	LogTypeString LogType = iota
+	// LogTypeSnapshot to log snapshot results
 	LogTypeSnapshot
+	// LogTypeHealth for health details logging
 	LogTypeHealth
+	// LogTypeInit for init details logging
 	LogTypeInit
+	// LogTypeStatus for differential results status logging
 	LogTypeStatus
 )
 
