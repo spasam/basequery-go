@@ -53,6 +53,7 @@ type ExtensionManagerServer struct {
 	registry       map[string](map[string]Plugin)
 	promServer     *http.Server
 	pluginCounter  *prometheus.CounterVec
+	pluginGauge    *prometheus.GaugeVec
 	pluginTime     *prometheus.HistogramVec
 	server         thrift.TServer
 	transport      thrift.TServerTransport
@@ -215,6 +216,10 @@ func (s *ExtensionManagerServer) Start() error {
 				Name: "plugin_calls",
 				Help: "Number of calls to a plugin action",
 			}, []string{"plugin_name", "plugin_action"})
+			s.pluginGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+				Name: "plugin_results",
+				Help: "Number of results returns by plugin action",
+			}, []string{"plugin_name", "plugin_action"})
 			s.pluginTime = promauto.NewHistogramVec(prometheus.HistogramOpts{
 				Name: "plugin_duration_seconds",
 				Help: "Histogram for plugin action duration in seconds",
@@ -311,6 +316,9 @@ func (s *ExtensionManagerServer) Call(ctx context.Context, registry string, item
 		defer timer.ObserveDuration()
 	}
 	response := plugin.Call(context.Background(), request)
+	if s.pluginGauge != nil {
+		s.pluginGauge.WithLabelValues(item, request["action"]).Set(float64(len(response.Response)))
+	}
 
 	return &response, nil
 }
