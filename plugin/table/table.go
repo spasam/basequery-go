@@ -16,11 +16,23 @@ import (
 // deserialized JSON query context from osquery.
 type GenerateFunc func(ctx context.Context, queryContext QueryContext) ([]map[string]string, error)
 
+// InsertFunc is optional implementation that can be used to implement insert SQL semantics
+type InsertFunc func(ctx context.Context, autoRowId bool, row []interface{}) ([]map[string]string, error)
+
+// UpdateFunc is optional implementation that can be used to implement update SQL semantics
+type UpdateFunc func(ctx context.Context, rowID int64, row []interface{}) error
+
+// DeleteFunc is optional implementation that can be used to implement delete SQL semantics
+type DeleteFunc func(ctx context.Context, rowID int64) error
+
 // Plugin structure holds the plugin details.
 type Plugin struct {
 	name     string
 	columns  []ColumnDefinition
 	generate GenerateFunc
+	insert   InsertFunc
+	update   UpdateFunc
+	delete   DeleteFunc
 }
 
 // NewPlugin is helper method to create plugin structure.
@@ -29,6 +41,31 @@ func NewPlugin(name string, columns []ColumnDefinition, gen GenerateFunc) *Plugi
 		name:     name,
 		columns:  columns,
 		generate: gen,
+	}
+}
+
+// NewMutablePlugin is helper method to create mutable plugin structure.
+func NewMutablePlugin(name string, columns []ColumnDefinition, gen GenerateFunc, ins InsertFunc, upd UpdateFunc, del DeleteFunc) *Plugin {
+	return &Plugin{
+		name:     name,
+		columns:  columns,
+		generate: gen,
+		insert:   ins,
+		update:   upd,
+		delete:   del,
+	}
+}
+
+func createError(prefix string, err error) osquery.ExtensionResponse {
+	msg := prefix
+	if err != nil {
+		msg += err.Error()
+	}
+	return osquery.ExtensionResponse{
+		Status: &osquery.ExtensionStatus{
+			Code:    1,
+			Message: msg,
+		},
 	}
 }
 
@@ -63,42 +100,82 @@ func (t *Plugin) Call(ctx context.Context, request osquery.ExtensionPluginReques
 	case "generate":
 		queryContext, err := parseQueryContext(request["context"])
 		if err != nil {
-			return osquery.ExtensionResponse{
-				Status: &osquery.ExtensionStatus{
-					Code:    1,
-					Message: "error parsing context JSON: " + err.Error(),
-				},
-			}
+			return createError("error parsing context JSON: ", err)
 		}
 
 		rows, err := t.generate(ctx, *queryContext)
 		if err != nil {
-			return osquery.ExtensionResponse{
-				Status: &osquery.ExtensionStatus{
-					Code:    1,
-					Message: "error generating table: " + err.Error(),
-				},
-			}
+			return createError("error generating table: ", err)
 		}
 
-		return osquery.ExtensionResponse{
-			Status:   &ok,
-			Response: rows,
+		return osquery.ExtensionResponse{Status: &ok, Response: rows}
+
+	case "insert":
+		if t.insert == nil {
+			return createError("'insert' not implemented by table: "+t.name, nil)
 		}
+
+		row, err := parseRow(request["json_value_array"])
+		if err != nil {
+			return createError("invalid data to insert: ", err)
+		}
+
+		autoRowID, err := strconv.ParseBool(request["auto_rowid"])
+		if err != nil {
+			return createError("invalid value for auto_rowid: ", err)
+		}
+
+		rows, err := t.insert(ctx, autoRowID, row)
+		if err != nil {
+			return createError("error inserting into table: ", err)
+		}
+
+		return osquery.ExtensionResponse{Status: &ok, Response: rows}
+
+	case "update":
+		if t.update == nil {
+			return createError("'update' not implemented by table: "+t.name, nil)
+		}
+
+		rowID, err := strconv.ParseInt(request["id"], 10, 64)
+		if err != nil {
+			return createError("invalid row id to update: ", err)
+		}
+
+		row, err := parseRow(request["json_value_array"])
+		if err != nil {
+			return createError("invalid data to update: ", err)
+		}
+
+		err = t.update(ctx, rowID, row)
+		if err != nil {
+			return createError("error updating table: ", err)
+		}
+
+		return osquery.ExtensionResponse{Status: &ok, Response: []map[string]string{{"status": "success"}}}
+
+	case "delete":
+		if t.delete == nil {
+			return createError("'delete' not implemented by table: "+t.name, nil)
+		}
+
+		rowID, err := strconv.ParseInt(request["id"], 10, 64)
+		if err != nil {
+			return createError("invalid row id to delete: ", err)
+		}
+
+		err = t.delete(ctx, rowID)
+		if err != nil {
+			return createError("error deleting from table: ", err)
+		}
+
+		return osquery.ExtensionResponse{Status: &ok, Response: []map[string]string{{"status": "success"}}}
 
 	case "columns":
-		return osquery.ExtensionResponse{
-			Status:   &ok,
-			Response: t.Routes(),
-		}
+		return osquery.ExtensionResponse{Status: &ok, Response: t.Routes()}
 
 	default:
-		return osquery.ExtensionResponse{
-			Status: &osquery.ExtensionStatus{
-				Code:    1,
-				Message: "unknown action: " + request["action"],
-			},
-		}
+		return createError("unknown action: "+request["action"], nil)
 	}
 
 }
@@ -279,6 +356,20 @@ func parseQueryContext(ctxJSON string) (*QueryContext, error) {
 	}
 
 	return &ctx, nil
+}
+
+func parseRow(row string) ([]interface{}, error) {
+	if row == "" {
+		return nil, errors.Errorf("invalid data to insert")
+	}
+
+	var parsed []interface{}
+	err := json.Unmarshal([]byte(row), &parsed)
+	if err != nil {
+		return nil, errors.Wrap(err, "unmarshaling JSON")
+	}
+
+	return parsed, nil
 }
 
 func parseConstraintList(constraints json.RawMessage) ([]Constraint, error) {
