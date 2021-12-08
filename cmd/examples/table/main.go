@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	verbose     = flag.Bool("verbose", false, "Verbose mode")
 	socket      = flag.String("socket", "", "Path to the extensions UNIX domain socket")
 	timeout     = flag.Int("timeout", 3, "Seconds to wait for autoloaded extensions")
 	interval    = flag.Int("interval", 3, "Seconds delay between connectivity checks")
