@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	//lint:ignore U1000 Argument is required by basequery
 	verbose     = flag.Bool("verbose", false, "Verbose mode")
 	socket      = flag.String("socket", "", "Path to the extensions UNIX domain socket")
 	timeout     = flag.Int("timeout", 3, "Seconds to wait for autoloaded extensions")

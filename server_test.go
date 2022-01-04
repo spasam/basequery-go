@@ -124,11 +124,14 @@ func testShutdownDeadlock(t *testing.T) {
 	addr, err := net.ResolveUnixAddr("unix", listenPath)
 	require.Nil(t, err)
 	timeout := 500 * time.Millisecond
-	trans := thrift.NewTSocketFromAddrTimeout(addr, timeout, timeout)
+	trans := thrift.NewTSocketFromAddrConf(addr, &thrift.TConfiguration{
+		ConnectTimeout: timeout,
+		SocketTimeout:  timeout,
+	})
 	err = trans.Open()
 	require.Nil(t, err)
 	client := osquery.NewExtensionManagerClientFactory(trans,
-		thrift.NewTBinaryProtocolFactoryDefault())
+		thrift.NewTBinaryProtocolFactoryConf(&thrift.TConfiguration{}))
 
 	// Simultaneously call shutdown through a request from the client and
 	// directly on the server object.

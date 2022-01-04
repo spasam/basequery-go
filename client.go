@@ -42,7 +42,7 @@ func NewClient(path string, timeout time.Duration) (*ExtensionManagerClient, err
 
 	client := osquery.NewExtensionManagerClientFactory(
 		trans,
-		thrift.NewTBinaryProtocolFactoryDefault(),
+		thrift.NewTBinaryProtocolFactoryConf(&thrift.TConfiguration{}),
 	)
 
 	return &ExtensionManagerClient{client, trans}, nil

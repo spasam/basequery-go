@@ -251,9 +251,9 @@ type ColumnType string
 // The following column types are defined in osquery tables.h.
 const (
 	ColumnTypeText    ColumnType = "TEXT"
-	ColumnTypeInteger            = "INTEGER"
-	ColumnTypeBigInt             = "BIGINT"
-	ColumnTypeDouble             = "DOUBLE"
+	ColumnTypeInteger ColumnType = "INTEGER"
+	ColumnTypeBigInt  ColumnType = "BIGINT"
+	ColumnTypeDouble  ColumnType = "DOUBLE"
 )
 
 // ColumnOptions for marking columns
@@ -308,15 +308,15 @@ type Operator int
 // The following operators are dfined in osquery tables.h.
 const (
 	OperatorEquals              Operator = 2
-	OperatorGreaterThan                  = 4
-	OperatorLessThanOrEquals             = 8
-	OperatorLessThan                     = 16
-	OperatorGreaterThanOrEquals          = 32
-	OperatorMatch                        = 64
-	OperatorLike                         = 65
-	OperatorGlob                         = 66
-	OperatorRegexp                       = 67
-	OperatorUnique                       = 1
+	OperatorGreaterThan         Operator = 4
+	OperatorLessThanOrEquals    Operator = 8
+	OperatorLessThan            Operator = 16
+	OperatorGreaterThanOrEquals Operator = 32
+	OperatorMatch               Operator = 64
+	OperatorLike                Operator = 65
+	OperatorGlob                Operator = 66
+	OperatorRegexp              Operator = 67
+	OperatorUnique              Operator = 1
 )
 
 // The following types and functions exist for parsing of the queryContext

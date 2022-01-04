@@ -18,18 +18,18 @@ func TestQueryRows(t *testing.T) {
 	mock.QueryFunc = func(ctx context.Context, sql string) (*osquery.ExtensionResponse, error) {
 		return nil, errors.New("Boom")
 	}
-	rows, err := client.QueryRows("select 1")
+	_, err := client.QueryRows("select 1")
 	assert.NotNil(t, err)
-	row, err := client.QueryRow("select 1")
+	_, err = client.QueryRow("select 1")
 	assert.NotNil(t, err)
 
 	// Nil status
 	mock.QueryFunc = func(ctx context.Context, sql string) (*osquery.ExtensionResponse, error) {
 		return &osquery.ExtensionResponse{}, nil
 	}
-	rows, err = client.QueryRows("select 1")
+	_, err = client.QueryRows("select 1")
 	assert.NotNil(t, err)
-	row, err = client.QueryRow("select 1")
+	_, err = client.QueryRow("select 1")
 	assert.NotNil(t, err)
 
 	// Query error
@@ -38,9 +38,9 @@ func TestQueryRows(t *testing.T) {
 			Status: &osquery.ExtensionStatus{Code: 1, Message: "bad query"},
 		}, nil
 	}
-	rows, err = client.QueryRows("select bad query")
+	_, err = client.QueryRows("select bad query")
 	assert.NotNil(t, err)
-	row, err = client.QueryRow("select bad query")
+	_, err = client.QueryRow("select bad query")
 	assert.NotNil(t, err)
 
 	// Good query (one row)
@@ -53,10 +53,10 @@ func TestQueryRows(t *testing.T) {
 			Response: expectedRows,
 		}, nil
 	}
-	rows, err = client.QueryRows("select 1")
+	rows, err := client.QueryRows("select 1")
 	assert.Nil(t, err)
 	assert.Equal(t, expectedRows, rows)
-	row, err = client.QueryRow("select 1")
+	row, err := client.QueryRow("select 1")
 	assert.Nil(t, err)
 	assert.Equal(t, expectedRows[0], row)
 
@@ -74,6 +74,6 @@ func TestQueryRows(t *testing.T) {
 	rows, err = client.QueryRows("select 1 union select 2")
 	assert.Nil(t, err)
 	assert.Equal(t, expectedRows, rows)
-	row, err = client.QueryRow("select 1 union select 2")
+	_, err = client.QueryRow("select 1 union select 2")
 	assert.NotNil(t, err)
 }

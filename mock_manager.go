@@ -105,5 +105,5 @@ func (m *MockExtensionManager) StreamEvents(name string, events osquery.Extensio
 
 func (m *MockExtensionManager) GetNodeKey() (string, error) {
 	m.GetNodeKeyFuncInvoked = true
-	return m.GetNodeKey()
+	return m.GetNodeKeyFunc()
 }

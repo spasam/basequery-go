@@ -9,16 +9,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type mockLoggerPlugin struct {
+type MockLoggerPlugin struct {
 	NameFunc      func() string
 	LogStringFunc func(context.Context, LogType, string) error
 }
 
-func (m *mockLoggerPlugin) Name() string {
+func (m *MockLoggerPlugin) Name() string {
 	return m.NameFunc()
 }
 
-func (m *mockLoggerPlugin) LogString(ctx context.Context, typ LogType, log string) error {
+func (m *MockLoggerPlugin) LogString(ctx context.Context, typ LogType, log string) error {
 	return m.LogStringFunc(ctx, typ, log)
 }
 
@@ -63,7 +63,13 @@ func TestLoggerPlugin(t *testing.T) {
 	assert.Equal(t, "logged init", calledLog)
 
 	// Log status
-	resp = plugin.Call(context.Background(), osquery.ExtensionPluginRequest{"status": "true", "log": `{"":{"s":"0","f":"events.cpp","i":"828","m":"Event publisher failed setup: kernel: Cannot access \/dev\/osquery"},"":{"s":"0","f":"events.cpp","i":"828","m":"Event publisher failed setup: scnetwork: Publisher not used"},"":{"s":"0","f":"scheduler.cpp","i":"74","m":"Executing scheduled query macos_kextstat: SELECT * FROM time"}}`})
+	resp = plugin.Call(
+		context.Background(),
+		osquery.ExtensionPluginRequest{
+			"status": "true",
+			"log":    `{"":{"s":"0","f":"events.cpp","i":"828","m":"Event publisher failed setup: kernel: Cannot access \/dev\/osquery"},"":{"s":"0","f":"events.cpp","i":"828","m":"Event publisher failed setup: scnetwork: Publisher not used"},"":{"s":"0","f":"scheduler.cpp","i":"74","m":"Executing scheduled query macos_kextstat: SELECT * FROM time"}}`,
+		},
+	)
 	assert.Equal(t, &StatusOK, resp.Status)
 	assert.Equal(t, LogTypeStatus, calledType)
 	assert.Equal(t, `{"s":"0","f":"scheduler.cpp","i":"74","m":"Executing scheduled query macos_kextstat: SELECT * FROM time"}`, calledLog)
